@@ -10,7 +10,8 @@ This file include utility functions for the balloon_finder project
 #
 
 # shift_pixels_down - shifts point down by "shift pixels" 
-def shift_pixels_down((x,y),shift_pixels):
+def shift_pixels_down(coords,shift_pixels):
+    x, y = coords
     return (x, y+shift_pixels)
 
 # rotate_xy - rotates an x,y pixel position around the center of the image by the specified angle (in radians)

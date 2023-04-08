@@ -46,7 +46,7 @@ class AttitudeHistory(object):
             #print "Add Att: t:%f r:%f p:%f y:%f" % (now, self.vehicle.attitude.roll, self.vehicle.attitude.pitch, self.vehicle.attitude.yaw) 
 
         # clear out any old entries
-        for t in self.att_dict.keys():
+        for t in list(self.att_dict):
             if t < now - self.max_delay:
                 self.att_dict.pop(t)
 
@@ -101,11 +101,11 @@ class AttitudeHistory(object):
 
         # debug
         if (tot_time_diff <= 0):
-            print "Div By Zero!"
-            print "des time:%f" % desired_time_in_sec
-            print "num keys:%d" % len(keys)
-            print "key bef:%f aft:%f" % (key_before, key_after)
-            print "keys: %s" % keys
+            print("Div By Zero!")
+            print("des time:%f" % desired_time_in_sec)
+            print("num keys:%d" % len(keys))
+            print("key bef:%f aft:%f" % (key_before, key_after))
+            print("keys: %s" % keys)
 
         # get attitude before and after
         att_before = self.att_dict[key_before]
@@ -125,7 +125,7 @@ class AttitudeHistory(object):
     def main(self):
 
         # print object
-        print "Test AttitudeHistory"
+        print("Test AttitudeHistory")
 
         for i in range(0,40):
             # add some entries
@@ -133,11 +133,11 @@ class AttitudeHistory(object):
             time.sleep(0.1)
 
         # print out dictionaries
-        print str(self)
+        print(str(self))
 
         # retrieve attitude 0.25 sec before
         att = self.get_attitude(time.time()-0.2)
-        print "Att 0.25 sec ago: %s" % att
+        print("Att 0.25 sec ago: %s" % att)
 
         # test entry which is later than last item
         #att = self.get_attitude(time.time())

@@ -39,7 +39,8 @@ class BalloonSimulator(object):
 
         # convert colour to BGR palette
         fake_balloon_colour_bgr = cv2.cvtColor(numpy.uint8([[[h,s,v]]]),cv2.COLOR_HSV2BGR)
-        self.fake_balloon_colour_bgr_scalar = cv2.cv.Scalar(fake_balloon_colour_bgr.item(0), fake_balloon_colour_bgr.item(1), fake_balloon_colour_bgr.item(2))
+        #self.fake_balloon_colour_bgr_scalar = cv2.cv.Scalar(fake_balloon_colour_bgr.item(0), fake_balloon_colour_bgr.item(1), fake_balloon_colour_bgr.item(2))
+        self.fake_balloon_colour_bgr_scalar = (fake_balloon_colour_bgr.item(0), fake_balloon_colour_bgr.item(1), fake_balloon_colour_bgr.item(2))
       
 
         # fake balloon is same radius as actual balloon
@@ -48,7 +49,8 @@ class BalloonSimulator(object):
         # background sky and ground colours
         self.background_sky_colour_bgr = (232, 228, 227)
         #self.background_ground_colour_bgr_scalar = cv2.cv.Scalar(87, 145, 158)
-        self.background_ground_colour_bgr_scalar = cv2.cv.Scalar(87, 145, 158)
+        #self.background_ground_colour_bgr_scalar = cv2.cv.Scalar(87, 145, 158)
+        self.background_ground_colour_bgr_scalar = (87, 145, 158)
 
         # last iterations balloon radius
         self.last_balloon_radius = 0
@@ -100,6 +102,7 @@ class BalloonSimulator(object):
         # calculate pixel position of balloon
         balloon_x = balloon_video.angle_to_pixels_x(yaw_to_balloon) + balloon_video.img_center_x
         balloon_y = balloon_video.angle_to_pixels_y(pitch_to_balloon) + balloon_video.img_center_y
+        coords = (int(balloon_x), int(balloon_y))
 
         # calculate size of balloon in pixels from distance and size
         dist_to_balloon_xyz = PositionVector.get_distance_xyz(veh_pos, balloon_pos)
@@ -109,7 +112,7 @@ class BalloonSimulator(object):
         self.last_balloon_radius = balloon_radius
 
         # draw balloon
-        cv2.circle(frame,(balloon_x,balloon_y), balloon_radius, self.fake_balloon_colour_bgr_scalar, -1)
+        cv2.circle(frame, coords, balloon_radius, self.fake_balloon_colour_bgr_scalar, -1)
 
     # get_simulated_frame - returns an image of a simulated background and balloon based upon vehicle position, vehicle attitude and balloon position
     def get_simulated_frame(self, veh_pos, vehicle_roll, vehicle_pitch, vehicle_yaw):
@@ -137,8 +140,8 @@ class BalloonSimulator(object):
         veh_yaw = PositionVector.get_bearing(veh_pos,fake_balloon_pos)  # facing towards fake balloon
 
         # display positions from home
-        print "Vehicle %s" % veh_pos
-        print "Balloon %s" % fake_balloon_pos
+        print("Vehicle %s" % veh_pos)
+        print("Balloon %s" % fake_balloon_pos)
 
         # generate simulated frame of balloon 10m north, 2m above vehicle
         img = self.get_simulated_frame(veh_pos, veh_roll, veh_pitch, veh_yaw)
@@ -156,7 +159,7 @@ class BalloonSimulator(object):
             # display actual vs real distance
             dist_actual = PositionVector.get_distance_xyz(veh_pos, fake_balloon_pos)
             dist_est = balloon_utils.get_distance_from_pixels(size, balloon_finder.balloon_radius_expected)
-            print "Dist Est:%f  Act:%f   Size Est:%f  Act:%f" % (dist_est, dist_actual, size, self.last_balloon_radius) 
+            print("Dist Est:%f  Act:%f   Size Est:%f  Act:%f" % (dist_est, dist_actual, size, self.last_balloon_radius) )
 
             # show image
             cv2.imshow("fake balloon", img)

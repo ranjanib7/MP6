@@ -10,16 +10,26 @@
 #       run this script and hold the object in front of the camera and move it around
 #       check the find_balloon.avi file to ensure the super-imposed circles accurately follow the object
 
+import os
 import sys
 import time
-#import cv2
+import cv2
 import numpy
 import math
+from pathlib import Path
 import balloon_config
 #from web_server import Webserver
+
+'''FILE = Path(__file__).resolve()
+ROOT = FILE.parents[0]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
+ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative'''
+
 from balloon_video import balloon_video
 import balloon_utils
 from position_vector import PositionVector
+from yolov5.detect import run_yolo
 
 class BalloonFinder(object):
 
@@ -52,47 +62,48 @@ class BalloonFinder(object):
     #        x: an integer holding the horizontal position in pixels of the center of the balloon on image  
     #        y: an integer holding the vertical position in pixels of the center of the balloon on image
     #        radius: a float(?) holding the radius of the balloon in pixels
-    def analyse_frame(self,frame):
+    def analyse_frame(self):
         balloon_found = False
         balloon_x = 0
         balloon_y = 0
         balloon_radius = 0
-    
-        # Convert BGR to HSV
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    
-        # Threshold the HSV image
-        mask = cv2.inRange(hsv, self.filter_low, self.filter_high)
-
-
-        #PAPOU_MOD Blur & Erode       
-        blurred = cv2.GaussianBlur(mask, (3,3), 0)
-        # Erode
-        erode_kernel = numpy.ones((3,3),numpy.uint8);
-        #eroded_img = cv2.erode(mask,erode_kernel,iterations = 1)
-        eroded_img = cv2.erode(blurred,erode_kernel,iterations = 2)
-
         
-        # dilate
-        dilate_kernel = numpy.ones((7,7),numpy.uint8);
-        dilate_img = cv2.dilate(eroded_img,dilate_kernel,iterations = 1)
+        ## setup simpleblob detector parameters
+        '''blobParams = cv2.SimpleBlobDetector_Params()
+
+        # change thresholds
+        blobParams.minThreshold = 8
+        blobParams.maxThreshold = 255
+
+        # filter by area
+        blobParams.filterByArea = True
+        blobParams.minArea = 64     # minArea may be adjusted to suit for your experiment
+        blobParams.maxArea = 2500   # maxArea may be adjusted to suit for your experiment
+
+        # Filter by Circularity
+        blobParams.filterByCircularity = True
+        blobParams.minCircularity = 0.1
+
+        # Filter by Convexity
+        blobParams.filterByConvexity = True
+        blobParams.minConvexity = 0.87
+
+        # Filter by Inertia
+        blobParams.filterByInertia = True
+        blobParams.minInertiaRatio = 0.01
+
+        # Create a detector with the parameters
+        blobDetector = cv2.SimpleBlobDetector_create(blobParams)
+        
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        keypts = blobDetector.detect(gray)
+        
+        # Draw detected blobs as red circles. This helps cv2.findCirclesGrid()
+        im_with_keypoints = cv2.drawKeypoints(img, keypoints, np.array([]), (0, 255,0), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        im_with_keypoints_gray = cv2.cvtColor(im_with_keypoints, cv2.COLOR_BGR2GRAY)
+        ret, corners = cv2.findCirclesGrid(im_with_keypoints, (4,11), None, flags=cv2.CALIB_CB_ASYMMETRIC_GRID)
     
-        # blog detector
-        blob_params = cv2.SimpleBlobDetector_Params()
-        blob_params.minDistBetweenBlobs = 50
-        blob_params.filterByInertia = False
-        blob_params.filterByConvexity = False
-        blob_params.filterByColor = True
-        blob_params.blobColor = 255
-        blob_params.filterByCircularity = True
-        blob_params.minCircularity = 0.5
-        blob_params.filterByArea = False
-        #blob_params.minArea = 20
-        #blob_params.maxArea = 500
-        blob_detector = cv2.SimpleBlobDetector(blob_params)
-        keypts = blob_detector.detect(dilate_img)
-    
-        # draw centers of all keypoints in new image
+        # draw centers of all keypoints in new imageball
         #blob_img = cv2.drawKeypoints(frame, keypts, color=(0,255,0), flags=0)
     
         # find largest blob
@@ -103,16 +114,18 @@ class BalloonFinder(object):
                     kp_max = kp
     
             # draw circle around the largest blob
-            cv2.circle(frame,(int(kp_max.pt[0]),int(kp_max.pt[1])),int(kp_max.size),(0,255,0),2)
+            cv2.circle(frame,(int(kp_max.pt[0]),int(kp_max.pt[1])),int(kp_max.size),(0,255,0),2)'''
+            
+        balloon_found, balloon_x, balloon_y, dist = run_yolo()
     
-            # set the balloon location
-            balloon_found = True
-            balloon_x = kp_max.pt[0]
-            balloon_y = kp_max.pt[1]
-            balloon_radius = kp_max.size
+        # set the balloon location
+        '''balloon_found = True
+        balloon_x = kp_max.pt[0]
+        balloon_y = kp_max.pt[1]
+        balloon_radius = kp_max.size'''
     
         # return results
-        return balloon_found, balloon_x, balloon_y, balloon_radius
+        return balloon_found, balloon_x, balloon_y, dist
 
     # add_artificial_horizon - adds artificial horizon to an image using the vehicle's attitude
     def add_artificial_horizon(self, frame, vehicle_roll, vehicle_pitch):
@@ -203,7 +216,7 @@ class BalloonFinder(object):
             if k == 27:
                 break
 
-        print "exiting..."
+        print("exiting...")
         web.close()
 
         # uncomment line below if window with real-time video was displayed

@@ -120,26 +120,26 @@ class PositionVector(object):
     @classmethod
     def update_lon_scale(cls, lat):
         global posvec_lon_scale
-        if lat <> 0:
+        if lat != 0:
             posvec_lon_scale = math.cos(math.radians(lat))
 
     # main - used to test the class
     def main(self):
         # set home position - to tridge's home field (this is just for testing anyway)
         PositionVector.set_home_location(LocationGlobal(-35.362938,149.165085,0))
-        print "Home %s" % PositionVector.get_home_location()
+        print("Home %s" % PositionVector.get_home_location())
         home_pos = PositionVector(0,0,0)
-        print "Home %s" % home_pos
+        print("Home %s" % home_pos)
 
         # other position
         other_pos = PositionVector.get_from_location(PositionVector.get_home_location())
-        print "Other %s" % other_pos
+        print("Other %s" % other_pos)
 
         # set vehicle to be 10m north, 10m east and 10m above home
         veh_pos = PositionVector(10,10,10)
-        print "Vehicle %s" % veh_pos.get_location()
-        print "Vehicle %s" % veh_pos
-        print "Distance from home: %f" % PositionVector.get_distance_xyz(home_pos,veh_pos)
+        print("Vehicle %s" % veh_pos.get_location())
+        print("Vehicle %s" % veh_pos)
+        print("Distance from home: %f" % PositionVector.get_distance_xyz(home_pos,veh_pos))
 
 
 # run the main routine if this is file is called from the command line

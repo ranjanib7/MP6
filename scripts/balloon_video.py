@@ -13,7 +13,7 @@ from os.path import expanduser
 import time
 import math
 from multiprocessing import Process, Pipe
-#import cv2
+import cv2
 import balloon_config
 
 # import pi camera if present
@@ -67,12 +67,12 @@ class BalloonVideo:
         # use webcam
         if self.camera_type == 0:
             self.camera = cv2.VideoCapture(0)
-            self.camera.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH,self.img_width)
-            self.camera.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT,self.img_height)
+            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH,self.img_width)
+            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT,self.img_height)
 
             # check we can connect to camera
             if not self.camera.isOpened():
-                print "failed to open camera, exiting!"
+                print("failed to open camera, exiting!")
                 sys.exit(0)
 
         # use rpi camera
@@ -114,12 +114,13 @@ class BalloonVideo:
     def open_video_writer(self):
         # Define the codec and create VideoWriter object
         # Note: setting ex to -1 will display pop-up requesting user choose the encoder
-        ex = int(cv2.cv.CV_FOURCC('M','J','P','G'))
+        #ex = int(cv2.cv.CV_FOURCC('M','J','P','G'))
+        ex = cv2.VideoWriter_fourcc(*'MJPG')
         self.video_writer = cv2.VideoWriter(self.video_filename, ex, 25, (self.img_width,self.img_height))        
         if not self.video_writer is None:
-            print "started recording video to %s" % self.video_filename
+            print("started recording video to %s" % self.video_filename)
         else:
-            print "failed to start recording video to %s" % self.video_filename
+            print("failed to start recording video to %s" % self.video_filename)
         return self.video_writer
 
 
@@ -149,7 +150,7 @@ class BalloonVideo:
     def image_capture_background(self, imgcap_connection):
         # exit immediately if imgcap_connection is invalid
         if imgcap_connection is None:
-            print "image_capture failed because pipe is uninitialised"
+            print("image_capture failed because pipe is uninitialised")
             return
 
         # open the camera
@@ -229,7 +230,7 @@ class BalloonVideo:
                 # display image
                 cv2.imshow ('image_display', img)
             else:
-                print "no image"
+                print("no image")
     
             # check for ESC key being pressed
             k = cv2.waitKey(5) & 0xFF
@@ -242,8 +243,8 @@ class BalloonVideo:
         # send exit command to image capture process
         self.stop_background_capture()
 
-        print "a2p 10 = %f" % self.angle_to_pixels_x(10)
-        print "p2a 10 = %f" % self.pixels_to_angle_x(10)
+        print("a2p 10 = %f" % self.angle_to_pixels_x(10))
+        print("p2a 10 = %f" % self.pixels_to_angle_x(10))
 
 # create a single global object
 balloon_video = BalloonVideo()
