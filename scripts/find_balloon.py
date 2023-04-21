@@ -116,7 +116,7 @@ class BalloonFinder(object):
             # draw circle around the largest blob
             cv2.circle(frame,(int(kp_max.pt[0]),int(kp_max.pt[1])),int(kp_max.size),(0,255,0),2)'''
             
-        balloon_found, balloon_x, balloon_y, dist = run_yolo()
+        balloon_found, obj, balloon_x, balloon_y, dist = run_yolo()
     
         # set the balloon location
         '''balloon_found = True

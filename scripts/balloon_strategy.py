@@ -22,7 +22,6 @@ from find_balloon import balloon_finder
 from fake_balloon import balloon_sim
 import pid
 from attitude_history import AttitudeHistory
-from yolov5.detect import calibrate_cam
 
 """
 This is an early guess at a top level controller that uses the DroneAPI and OpenCV magic
@@ -167,6 +166,7 @@ class BalloonStrategy(object):
         #connection_baud = balloon_config.config.get_integer('dronekit','baud', 921600)
         print("connecting to vehicle") # on %s, baud=%d" % (connection_str, connection_baud)
         #return connect(connection_str, baud=connection_baud)
+        #return connect('/dev/ttyS0', wait_ready=True, baud=57600)
         return connect('0.0.0.0:14550', wait_ready=True)
 
     # fetch_mission - fetch mission from flight controller
@@ -610,7 +610,6 @@ class BalloonStrategy(object):
         self.stats_start_time = now
 
     def run(self):
-        calibrate_cam()
         while True:
 
             # only process images once home has been initialised

@@ -369,8 +369,8 @@ class LoadStreams:
             self.fps[i] = max((fps if math.isfinite(fps) else 0) % 100, 0) or 30  # 30 FPS fallback
 
             _, self.imgs[i] = self.cap.read()  # guarantee first frame
-            self.imgs[i] = cv2.flip(self.imgs[i], 0)
-            self.threads[i] = Thread(target=self.update, args=([i, self.cap, s]), daemon=True)
+            #self.imgs[i] = cv2.flip(self.imgs[i], 0)
+            self.threads[i] = Thread(target=self.update, args=([i, s]), daemon=True)
             LOGGER.info(f"{st} Success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)")
             self.threads[i].start()
         LOGGER.info('')  # newline
@@ -386,15 +386,16 @@ class LoadStreams:
     def get_cap():
         return self.cap
 
-    def update(self, i, cap, stream):
+    def update(self, i, stream):
         # Read stream `i` frames in daemon thread
         n, f = 0, self.frames[i]  # frame number, frame array
-        while cap.isOpened() and n < f:
+        self.cap = cv2.VideoCapture(s)
+        while self.cap.isOpened() and n < f:
             n += 1
             cap.grab()  # .read() = .grab() followed by .retrieve()
             if n % self.vid_stride == 0:
                 success, im = cap.retrieve()
-                im = cv2.flip(im, 0)
+                #im = cv2.flip(im, 0)
                 if success:
                     self.imgs[i] = im
                 else:
@@ -402,6 +403,7 @@ class LoadStreams:
                     self.imgs[i] = np.zeros_like(self.imgs[i])
                     cap.open(stream)  # re-open stream if signal was lost
             time.sleep(0.0)  # wait time
+        cap.release()
 
     def __iter__(self):
         self.count = -1
@@ -420,8 +422,7 @@ class LoadStreams:
             im = np.stack([letterbox(x, self.img_size, stride=self.stride, auto=self.auto)[0] for x in im0])  # resize
             im = im[..., ::-1].transpose((0, 3, 1, 2))  # BGR to RGB, BHWC to BCHW
             im = np.ascontiguousarray(im)  # contiguous
-
-        return self.sources, im, im0, None, '', self.cap
+        return self.sources, im, im0, None, ''
 
     def __len__(self):
         return len(self.sources)  # 1E12 frames = 32 streams at 30 FPS for 30 years
