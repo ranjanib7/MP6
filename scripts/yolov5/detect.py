@@ -118,7 +118,7 @@ def run_yolo(
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
-    for path, im, im0s, vid_cap, s in dataset:
+    for path, im, im0s, vid_cap, s, cap in dataset:
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -187,7 +187,7 @@ def run_yolo(
                         #annotator.box_label(xyxy, f'{names[c]}', color=colors(c,True))
                         #LOGGER.info(f'coords {x_center} {y_center}')
                         distance = getAndPrint()
-                        LOGGER.info(f"Distance{colorstr('bold', distance)}")
+                        #LOGGER.info(f"Distance{colorstr('bold', distance)}")
                         #annotator.box_label(xyxy, f'{names[c]} {distance}', color=colors(c,True))
                         obj = names[c]
                     #annotator.box_label(xyxy, f'{names[c]}', color=colors(c,True))
@@ -200,12 +200,13 @@ def run_yolo(
                     cv2.namedWindow(str(p), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
                     cv2.resizeWindow(str(p), im0.shape[1], im0.shape[0])
                 cv2.imshow(str(p), im0)
-                cv2.waitKey(1)  # 1 millisecond
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                cv2.waitKey(3)  # 1 millisecond
+                if cv2.waitKey(3) & 0xFF == ord('q'):
                     break
 
         # Print time (inference-only)
         LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
+        dataset.stop_flag = True
         return found, obj, x_center, y_center, distance
 
     # Print results
@@ -214,4 +215,4 @@ def run_yolo(
     if update:
         strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
 
-    return found, x_center, y_center, distance
+    #return found, x_center, y_center, distance

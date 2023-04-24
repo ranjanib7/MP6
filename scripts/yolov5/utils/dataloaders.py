@@ -348,6 +348,7 @@ class LoadStreams:
         self.img_size = img_size
         self.stride = stride
         self.vid_stride = vid_stride  # video frame-rate stride
+        self.stop_flag = True
         sources = Path(sources).read_text().rsplit() if os.path.isfile(sources) else [sources]
         n = len(sources)
         self.sources = [clean_str(x) for x in sources]  # clean source names for later
@@ -361,6 +362,7 @@ class LoadStreams:
                 assert not is_colab(), '--source 0 webcam unsupported on Colab. Rerun command in a local environment.'
                 assert not is_kaggle(), '--source 0 webcam unsupported on Kaggle. Rerun command in a local environment.'
             self.cap = cv2.VideoCapture(s)
+            time.sleep(2)
             assert self.cap.isOpened(), f'{st}Failed to open {s}'
             w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -382,28 +384,25 @@ class LoadStreams:
         self.transforms = transforms  # optional
         if not self.rect:
             LOGGER.warning('WARNING ⚠️ Stream shapes differ. For optimal performance supply similarly-shaped streams.')
-            
-    def get_cap():
-        return self.cap
 
     def update(self, i, stream):
         # Read stream `i` frames in daemon thread
         n, f = 0, self.frames[i]  # frame number, frame array
-        self.cap = cv2.VideoCapture(s)
-        while self.cap.isOpened() and n < f:
+        while self.cap.isOpened() and n < f and not self.stop_flag:
             n += 1
-            cap.grab()  # .read() = .grab() followed by .retrieve()
+            self.cap.grab()  # .read() = .grab() followed by .retrieve()
             if n % self.vid_stride == 0:
-                success, im = cap.retrieve()
+                success, im = self.cap.retrieve()
                 #im = cv2.flip(im, 0)
                 if success:
                     self.imgs[i] = im
                 else:
                     LOGGER.warning('WARNING ⚠️ Video stream unresponsive, please check your IP camera connection.')
                     self.imgs[i] = np.zeros_like(self.imgs[i])
-                    cap.open(stream)  # re-open stream if signal was lost
+                    self.cap.open(stream)  # re-open stream if signal was lost
             time.sleep(0.0)  # wait time
-        cap.release()
+        self.cap.release()
+        cv2.destroyAllWindows()
 
     def __iter__(self):
         self.count = -1
@@ -422,7 +421,7 @@ class LoadStreams:
             im = np.stack([letterbox(x, self.img_size, stride=self.stride, auto=self.auto)[0] for x in im0])  # resize
             im = im[..., ::-1].transpose((0, 3, 1, 2))  # BGR to RGB, BHWC to BCHW
             im = np.ascontiguousarray(im)  # contiguous
-        return self.sources, im, im0, None, ''
+        return self.sources, im, im0, None, '', self.cap
 
     def __len__(self):
         return len(self.sources)  # 1E12 frames = 32 streams at 30 FPS for 30 years

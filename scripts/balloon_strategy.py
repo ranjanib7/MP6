@@ -70,22 +70,22 @@ class BalloonStrategy(object):
         self.attitude_delay = 0.0               # expected delay between image and attitude
 
         # search variables
-        self.search_state = 0                   # 0 = not search, 1 = spinning and looking, 2 = rotating to best balloon and double checking, 3 = finalise yaw 
+        self.search_state = 1                   # 0 = not search, 1 = spinning and looking, 2 = rotating to best balloon and double checking, 3 = finalise yaw
         self.search_start_heading = None        # initial heading of vehicle when search began
         self.search_target_heading = None       # the vehicle's current target heading (updated as vehicle spins during search)
         self.search_heading_change = None       # heading change (in radians) performed so far during search
         self.search_balloon_pos = None          # position (as an offset from home) of closest balloon (so far) during search
         self.search_balloon_heading = None      # earth-frame heading (in radians) from vehicle to closest balloon
         self.search_balloon_pitch_top = None        # earth-frame pitch (in radians) from vehicle to closest balloon
-        self.search_balloon_distance = None     # distance (in meters) from vehicle to closest balloon
+        self.search_balloon_distance = 4     # distance (in meters) from vehicle to closest balloon
         self.targeting_start_time = 0           # time vehicle first pointed towards final target (used with delay_time below)
         self.targeting_delay_time = balloon_config.config.get_float('general','SEARCH_TARGET_DELAY',2.0)    # time vehicle waits after pointing towards ballon and before heading towards it
-        self.search_yaw_speed = balloon_config.config.get_float('general','SEARCH_YAW_SPEED',5.0) 
+        self.search_yaw_speed = balloon_config.config.get_float('general','SEARCH_YAW_SPEED',5.0)
 
         # vehicle mission
         self.mission_cmds = None
         self.mission_alt_min = 0                # min altitude from NAV_GUIDED mission command (we ignore balloons below this altitude).  "0" means no limit
-        self.mission_alt_max = 0                # max altitude from NAV_GUIDED mission command (we ignore balloons above this altitude).  "0" means no limit
+        self.mission_alt_max = 3                # max altitude from NAV_GUIDED mission command (we ignore balloons above this altitude).  "0" means no limit
         self.mission_distance_max = 0           # max distance from NAV_GUIDED mission command (we ignore balloons further than this distance).  "0" means no limit
 
         # we are not in control of vehicle
@@ -148,7 +148,7 @@ class BalloonStrategy(object):
         self.vel_speed_max = balloon_config.config.get_float('general','VEL_SPEED_MAX',4.0)
         self.vel_speed_last = 0.0   # last recorded speed
         self.vel_accel = balloon_config.config.get_float('general','VEL_ACCEL', 0.5)    # maximum acceleration in m/s/s
-        self.vel_dist_ratio = balloon_config.config.get_float('general','VEL_DIST_RATIO', 0.5) 
+        self.vel_dist_ratio = balloon_config.config.get_float('general','VEL_DIST_RATIO', 0.5)
 
         # pitch angle to hit balloon at.  negative means come down from above
         self.vel_pitch_target = math.radians(balloon_config.config.get_float('general','VEL_PITCH_TARGET',-5.0))
@@ -162,7 +162,7 @@ class BalloonStrategy(object):
 
     # connect to vehicle with dronekit
     def get_vehicle_with_dronekit(self):
-        #connection_str = balloon_config.config.get_string('dronekit','connection_string','0.0.0.0:14550') 
+        #connection_str = balloon_config.config.get_string('dronekit','connection_string','0.0.0.0:14550')
         #connection_baud = balloon_config.config.get_integer('dronekit','baud', 921600)
         print("connecting to vehicle") # on %s, baud=%d" % (connection_str, connection_baud)
         #return connect(connection_str, baud=connection_baud)
@@ -252,6 +252,7 @@ class BalloonStrategy(object):
     # check_status - poles vehicle' status to determine if we are in control of vehicle or not
     def check_status(self):
 
+        print('check status and mode ', self.vehicle.mode.name)
         # we are active in guided mode
         if self.vehicle.mode.name == "GUIDED":
             if not self.controlling_vehicle:
@@ -259,7 +260,7 @@ class BalloonStrategy(object):
                 print("taking control of vehicle in GUIDED")
                 # clear out any limits on balloon position
                 self.mission_alt_min = 1
-                self.mission_alt_max = 0
+                self.mission_alt_max = 3
                 self.mission_distance_max = 50
                 # start search for balloon
                 print("starting search alt_min:%f alt_max:%f dist_max:%f" % (self.mission_alt_min, self.mission_alt_max, self.mission_distance_max))
@@ -289,8 +290,8 @@ class BalloonStrategy(object):
                     self.mission_distance_max = self.vehicle.commands[active_command].param4
                     print("starting search alt_min:%f alt_max:%f dist_max:%f" % (self.mission_alt_min, self.mission_alt_max, self.mission_distance_max))
                     self.start_search()
-                return    
-    
+                return
+
         # if we got here then we are not in control
         if self.controlling_vehicle:
             self.controlling_vehicle = False
@@ -321,7 +322,7 @@ class BalloonStrategy(object):
                                                      0, 0, 0, # x, y, z positions (not used)
                                                      velocity_x, velocity_y, velocity_z, # x, y, z velocity in m/s
                                                      0, 0, 0, # x, y, z acceleration (not used)
-                                                     0, 0)    # yaw, yaw_rate (not used) 
+                                                     0, 0)    # yaw, yaw_rate (not used)
         # send command to vehicle
         self.vehicle.send_mavlink(msg)
         self.vehicle.flush()
@@ -357,7 +358,7 @@ class BalloonStrategy(object):
             frame = balloon_sim.get_simulated_frame(veh_pos, self.vehicle.attitude.roll, self.vehicle.attitude.pitch, self.vehicle.attitude.yaw)
         else:
             frame = balloon_video.get_image()
-            
+
         return frame
 
     # get image from balloon_video class and look for balloon, results are held in the following variables:
@@ -389,12 +390,12 @@ class BalloonStrategy(object):
 
         # add artificial horizon
         #balloon_finder.add_artificial_horizon(f, veh_att_delayed.roll, veh_att_delayed.pitch)'''
-        
+
 
         if self.balloon_found:
             # record time balloon was found
             self.last_spotted_time = now
-        
+
             # convert x, y position to pitch and yaw direction (in radians)
             self.balloon_pitch, self.balloon_heading = balloon_finder.pixels_to_direction(xpos, ypos, veh_att_delayed.roll, veh_att_delayed.pitch, veh_att_delayed.yaw)
             self.balloon_pitch = math.radians(self.balloon_pitch)
@@ -406,6 +407,7 @@ class BalloonStrategy(object):
 
             # updated estimated balloon position
             self.balloon_pos = balloon_finder.project_position(self.vehicle_pos, self.balloon_pitch, self.balloon_heading, self.balloon_distance)
+            print('new position ', self.balloon_pos)
 
         # save image for debugging later
         #if not self.writer is None:
@@ -435,6 +437,7 @@ class BalloonStrategy(object):
     # analyze_image should have been called just before and should have filled in self.balloon_found, self.balloon_pos, balloon_distance, balloon_pitch and balloon_yaw
     def search_for_balloon(self):
 
+        print('search for balloon')
         # exit immediately if we are not controlling the vehicle or do not know our position
         if not self.controlling_vehicle or self.vehicle_pos is None:
             return
@@ -447,9 +450,9 @@ class BalloonStrategy(object):
 
         # search_state = 1: spinning and looking
         if (self.search_state == 1):
-
             # check if we have seen a balloon
             if self.balloon_found:
+                print('heere ', self.balloon_distance, self.search_balloon_distance)
                 # if this is the first balloon we've found or the closest, store it's position as the closest
                 if (self.search_balloon_pos is None) or (self.balloon_distance < self.search_balloon_distance):
                     # check distance is within acceptable limits
@@ -465,6 +468,7 @@ class BalloonStrategy(object):
 
             # update yaw so we keep spinning
             if math.fabs(wrap_PI(self.vehicle.attitude.yaw - self.search_target_heading)) < math.radians(self.search_yaw_speed * 2.0):
+                print('spinning')
                 # increase yaw target
                 self.search_target_heading = self.search_target_heading - math.radians(self.search_yaw_speed)
                 self.search_total_angle = self.search_total_angle + math.radians(self.search_yaw_speed)
@@ -524,9 +528,10 @@ class BalloonStrategy(object):
                 print("Finalised yaw to %f, beginning run" % (math.degrees(self.search_balloon_heading)))
 
     # move_to_balloon - velocity controller to drive vehicle to balloon
-    #    analyze_image should have been called prior to this and filled in self.balloon_found, balloon_pitch, balloon_heading, balloon_distance 
+    #    analyze_image should have been called prior to this and filled in self.balloon_found, balloon_pitch, balloon_heading, balloon_distance
     def move_to_balloon(self):
 
+        print('move to balloon')
         # exit immediately if we are not controlling the vehicle
         if not self.controlling_vehicle:
             return
@@ -544,7 +549,7 @@ class BalloonStrategy(object):
             # calculate change in yaw since we began the search
             yaw_error = wrap_PI(self.balloon_heading - self.search_balloon_heading)
 
-            # calculate pitch vs ideal pitch angles.  This will cause to attempt to get to 5deg above balloon 
+            # calculate pitch vs ideal pitch angles.  This will cause to attempt to get to 5deg above balloon
             pitch_error = wrap_PI(self.balloon_pitch_top - self.vel_pitch_target)
 
             # get time since last time velocity pid controller was run
@@ -572,7 +577,7 @@ class BalloonStrategy(object):
             # calculate pitch correction and final pitch movement
             pitch_correction = self.vel_z_pid.get_pid(pitch_error, dt)
             pitch_final = wrap_PI(self.search_balloon_pitch_top - pitch_correction)
-            
+
             # calculate velocity vector we wish to move in
             self.guided_target_vel = balloon_finder.get_ef_velocity_vector(pitch_final, yaw_final, speed)
 
@@ -597,7 +602,7 @@ class BalloonStrategy(object):
         now = time.time()
 
         # output stats each 10seconds
-        time_diff = now - self.stats_start_time 
+        time_diff = now - self.stats_start_time
         if time_diff < 10 or time_diff <= 0:
             return
 
@@ -610,25 +615,27 @@ class BalloonStrategy(object):
         self.stats_start_time = now
 
     def run(self):
-    
+
+        if self.vehicle.mode != VehicleMode("STABILIZE"):
+            self.vehicle.mode = VehicleMode("STABILIZE")
         # arm the drone
-        vehicle.armed   = True
-        
-        while not vehicle.armed:
+        self.vehicle.armed   = True
+
+        while not self.vehicle.armed:
             print(" Waiting for arming...")
             time.sleep(1)
-        
+
         # takeoff to 2m
         # Copter should arm in GUIDED mode
-        vehicle.mode    = VehicleMode("GUIDED")
-        vehicle.simple_takeoff(2)
-        
+        self.vehicle.simple_takeoff(2)
+        self.vehicle.mode    = VehicleMode("GUIDED")
+
         # Wait until the vehicle reaches a safe height before processing the goto (otherwise the command
         #  after Vehicle.simple_takeoff will execute immediately).
         while True:
-            print " Altitude: ", vehicle.location.global_relative_frame.alt
+            print(" Altitude: ", self.vehicle.location.global_relative_frame.alt)
             #Break and return from function just below target altitude.
-            if vehicle.location.global_relative_frame.alt>=3*0.95:
+            if self.vehicle.location.global_relative_frame.alt>=2*0.95:
                 print("Reached target altitude")
                 break
             time.sleep(1)
@@ -641,8 +648,8 @@ class BalloonStrategy(object):
                 # start video if required
                 #self.check_video_out()
                 # Load model
-                
-    
+
+
                 # check if we are controlling the vehicle
                 self.check_status()
 
@@ -662,6 +669,7 @@ class BalloonStrategy(object):
 
             # Don't suck up too much CPU, only process a new image occasionally
             time.sleep(0.05)
+        self.vehicle.close()
 
         if not self.use_simulator:
             balloon_video.stop_background_capture()
@@ -689,7 +697,7 @@ class BalloonStrategy(object):
 
         # flag we are not in control of the vehicle
         self.controlling_vehicle = False
-            
+
         return
 
 strat = BalloonStrategy()

@@ -48,10 +48,12 @@ def getAndPrint():
         distance = distance + measurementInCM()
 
     distance = distance/50
-    print('Distance from object ', distance, 'cm')
+    distance = distance/100
+    print('Distance from object ', distance,'m')
 
     # Reset GPIO settings
     GPIO.cleanup()
+    return distance
 
 
 def measurementInCM():
